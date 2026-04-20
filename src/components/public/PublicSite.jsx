@@ -7,6 +7,7 @@ function PublicSite({ services, testimonials, info, onBooking }) {
   const [page, setPage] = useState("home");
   const [added, setAdded] = useState({});
   const [done, setDone] = useState(false);
+  const [bookingError, setBookingError] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", address: "", date: "" });
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -22,20 +23,26 @@ function PublicSite({ services, testimonials, info, onBooking }) {
     return x;
   });
 
-  const handleBook = (e) => {
+  const handleBook = async (e) => {
     e.preventDefault();
-    onBooking({
-      ...form,
-      services: active.filter(s => added[s.name]).map(s => ({ ...s, qty: added[s.name] })),
-      total: totalPrice,
-      bookedAt: new Date().toLocaleString(),
-    });
-    setDone(true);
-    setTimeout(() => {
-      setDone(false); setAdded({});
-      setForm({ name: "", phone: "", address: "", date: "" });
-      setPage("home");
-    }, 3000);
+    setBookingError("");
+    try {
+      await onBooking({
+        ...form,
+        services: active.filter(s => added[s.name]).map(s => ({ ...s, qty: added[s.name] })),
+        total: totalPrice,
+        bookedAt: new Date().toLocaleString(),
+      });
+      setDone(true);
+      setTimeout(() => {
+        setDone(false); setAdded({});
+        setForm({ name: "", phone: "", address: "", date: "" });
+        setPage("home");
+      }, 3000);
+    } catch (err) {
+      console.error("Booking save failed:", err);
+      setBookingError("Booking failed. Please try again in a few seconds.");
+    }
   };
 
   const goTo = (p) => { setPage(p); setMenuOpen(false); window.scrollTo(0, 0); };
@@ -301,6 +308,14 @@ function PublicSite({ services, testimonials, info, onBooking }) {
               </div>
               <div style={cardStyle}>
                 <h3 style={{ color: "#0f3460", marginBottom: 16, fontWeight: 700, fontSize: 14 }}>Your Details</h3>
+                {bookingError && (
+                  <div style={{
+                    background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca",
+                    borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: 12, fontWeight: 600,
+                  }}>
+                    {bookingError}
+                  </div>
+                )}
                 <form onSubmit={handleBook}>
                   {[["name", "Full Name", "text"], ["phone", "Phone Number", "tel"], ["address", "Address", "text"], ["date", "Preferred Date", "date"]].map(([k, pl, t]) => (
                     <div key={k} style={{ marginBottom: 12 }}>

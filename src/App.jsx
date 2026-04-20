@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import AdminLogin from "./components/admin/AdminLogin";
-import AdminPanel from "./components/admin/AdminPanel";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import PublicSite from "./components/public/PublicSite";
 import { defaultServices, defaultTestimonials, defaultInfo } from "./data/defaults";
 import { db } from "./firebase/config";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { arrayUnion, doc, onSnapshot, setDoc } from "firebase/firestore";
 
+const AdminLogin = lazy(() => import("./components/admin/AdminLogin"));
+const AdminPanel = lazy(() => import("./components/admin/AdminPanel"));
 const DOC = (key) => doc(db, "pama", key);
 
 export default function App() {
@@ -16,86 +16,122 @@ export default function App() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const servicesRef = useRef(services);
+  const testimonialsRef = useRef(testimonials);
+  const infoRef = useRef(info);
 
-  // ── REAL-TIME LISTENERS ─────────────────────────────────────────────────
-  // These fire instantly on ALL devices/browsers when admin saves anything
+  useEffect(() => { servicesRef.current = services; }, [services]);
+  useEffect(() => { testimonialsRef.current = testimonials; }, [testimonials]);
+  useEffect(() => { infoRef.current = info; }, [info]);
+
+  // ── REAL-TIME LISTENERS (Public + Admin shared docs) ───────────────────
   useEffect(() => {
-    let loadCount = 0;
-    const totalDocs = 4;
+    const loaded = { services: false, testimonials: false, info: false };
 
-    const markLoaded = () => {
-      loadCount++;
-      if (loadCount >= totalDocs) setLoading(false);
+    const markLoaded = (key) => {
+      if (loaded[key]) return;
+      loaded[key] = true;
+      if (loaded.services && loaded.testimonials && loaded.info) setLoading(false);
     };
+
+    // Avoid long blank screen on slow connections.
+    const loadTimeout = setTimeout(() => setLoading(false), 4000);
 
     // Listen to services
     const unsubServices = onSnapshot(DOC("services"), (snap) => {
       if (snap.exists()) setServices(snap.data().list);
-      markLoaded();
+      markLoaded("services");
     }, (err) => {
       console.error("Services listener error:", err);
-      markLoaded();
+      markLoaded("services");
     });
 
     // Listen to testimonials
     const unsubTestimonials = onSnapshot(DOC("testimonials"), (snap) => {
       if (snap.exists()) setTestimonials(snap.data().list);
-      markLoaded();
+      markLoaded("testimonials");
     }, (err) => {
       console.error("Testimonials listener error:", err);
-      markLoaded();
+      markLoaded("testimonials");
     });
 
     // Listen to info
     const unsubInfo = onSnapshot(DOC("info"), (snap) => {
       if (snap.exists()) setInfo(snap.data());
-      markLoaded();
+      markLoaded("info");
     }, (err) => {
       console.error("Info listener error:", err);
-      markLoaded();
-    });
-
-    // Listen to bookings
-    const unsubBookings = onSnapshot(DOC("bookings"), (snap) => {
-      if (snap.exists()) setBookings(snap.data().list || []);
-      markLoaded();
-    }, (err) => {
-      console.error("Bookings listener error:", err);
-      markLoaded();
+      markLoaded("info");
     });
 
     // Cleanup all listeners when app unmounts
     return () => {
+      clearTimeout(loadTimeout);
       unsubServices();
       unsubTestimonials();
       unsubInfo();
-      unsubBookings();
     };
   }, []);
 
+  // ── REAL-TIME LISTENER (Admin-only) ─────────────────────────────────────
+  useEffect(() => {
+    if (mode !== "admin") return;
+
+    const unsubBookings = onSnapshot(DOC("bookings"), (snap) => {
+      if (snap.exists()) setBookings(snap.data().list || []);
+      else setBookings([]);
+    }, (err) => {
+      console.error("Bookings listener error:", err);
+    });
+
+    return () => unsubBookings();
+  }, [mode]);
+
   // ── SAVE FUNCTIONS (only called by admin) ───────────────────────────────
   const handleSetServices = async (val) => {
-    const updated = typeof val === "function" ? val(services) : val;
+    const prev = servicesRef.current;
+    const updated = typeof val === "function" ? val(prev) : val;
+    servicesRef.current = updated;
     setServices(updated);
-    await setDoc(DOC("services"), { list: updated });
+    try {
+      await setDoc(DOC("services"), { list: updated });
+    } catch (err) {
+      servicesRef.current = prev;
+      setServices(prev);
+      throw err;
+    }
   };
 
   const handleSetTestimonials = async (val) => {
-    const updated = typeof val === "function" ? val(testimonials) : val;
+    const prev = testimonialsRef.current;
+    const updated = typeof val === "function" ? val(prev) : val;
+    testimonialsRef.current = updated;
     setTestimonials(updated);
-    await setDoc(DOC("testimonials"), { list: updated });
+    try {
+      await setDoc(DOC("testimonials"), { list: updated });
+    } catch (err) {
+      testimonialsRef.current = prev;
+      setTestimonials(prev);
+      throw err;
+    }
   };
 
   const handleSetInfo = async (val) => {
-    const updated = typeof val === "function" ? val(info) : val;
+    const prev = infoRef.current;
+    const updated = typeof val === "function" ? val(prev) : val;
+    infoRef.current = updated;
     setInfo(updated);
-    await setDoc(DOC("info"), updated);
+    try {
+      await setDoc(DOC("info"), updated);
+    } catch (err) {
+      infoRef.current = prev;
+      setInfo(prev);
+      throw err;
+    }
   };
 
   const handleNewBooking = async (booking) => {
-    const updated = [...bookings, booking];
-    setBookings(updated);
-    await setDoc(DOC("bookings"), { list: updated });
+    await setDoc(DOC("bookings"), { list: arrayUnion(booking) }, { merge: true });
   };
 
   // ── Admin keyboard shortcut ─────────────────────────────────────────────
@@ -130,17 +166,21 @@ export default function App() {
   }
 
   if (mode === "adminLogin") return (
-    <AdminLogin onLogin={() => { setMode("admin"); setIsAdmin(true); }} />
+    <Suspense fallback={<div style={{ padding: 24, fontFamily: "Georgia, serif" }}>Loading admin...</div>}>
+      <AdminLogin onLogin={() => { setMode("admin"); setIsAdmin(true); }} />
+    </Suspense>
   );
 
   if (mode === "admin") return (
-    <AdminPanel
-      services={services}         setServices={handleSetServices}
-      testimonials={testimonials} setTestimonials={handleSetTestimonials}
-      info={info}                 setInfo={handleSetInfo}
-      bookings={bookings}
-      onLogout={() => { setMode("public"); setIsAdmin(false); }}
-    />
+    <Suspense fallback={<div style={{ padding: 24, fontFamily: "Georgia, serif" }}>Loading admin...</div>}>
+      <AdminPanel
+        services={services}         setServices={handleSetServices}
+        testimonials={testimonials} setTestimonials={handleSetTestimonials}
+        info={info}                 setInfo={handleSetInfo}
+        bookings={bookings}
+        onLogout={() => { setMode("public"); setIsAdmin(false); }}
+      />
+    </Suspense>
   );
 
   return (

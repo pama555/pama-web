@@ -22,42 +22,94 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
-  const saveInfo = () => { setInfo({ ...editInfo }); showToast("✅ Business info saved!"); };
+  const saveInfo = async () => {
+    try {
+      await setInfo({ ...editInfo });
+      showToast("✅ Business info saved!");
+    } catch (err) {
+      console.error("Failed to save business info:", err);
+      showToast("❌ Save failed. Check Firebase rules/env.");
+    }
+  };
 
-  const addService = () => {
+  const addService = async () => {
     if (!newSvc.name || !newSvc.price) return showToast("❌ Name and price required.");
-    setServices(prev => [...prev, {
-      ...newSvc, id: Date.now(), price: +newSvc.price,
-      original: newSvc.original ? +newSvc.original : null, rating: null, reviews: null
-    }]);
-    setNewSvc({ icon: "🏠", name: "", price: "", original: "", badge: "", active: true });
-    showToast("✅ Service added!");
+    try {
+      await setServices(prev => [...prev, {
+        ...newSvc, id: Date.now(), price: +newSvc.price,
+        original: newSvc.original ? +newSvc.original : null, rating: null, reviews: null
+      }]);
+      setNewSvc({ icon: "🏠", name: "", price: "", original: "", badge: "", active: true });
+      showToast("✅ Service added!");
+    } catch (err) {
+      console.error("Failed to save service:", err);
+      showToast("❌ Save failed. Check Firebase rules/env.");
+    }
   };
 
-  const updateService = () => {
-    setServices(prev => prev.map(s => s.id === editSvc.id
-      ? { ...editSvc, price: +editSvc.price, original: editSvc.original ? +editSvc.original : null }
-      : s));
-    setEditSvc(null);
-    showToast("✅ Service updated!");
+  const updateService = async () => {
+    try {
+      await setServices(prev => prev.map(s => s.id === editSvc.id
+        ? { ...editSvc, price: +editSvc.price, original: editSvc.original ? +editSvc.original : null }
+        : s));
+      setEditSvc(null);
+      showToast("✅ Service updated!");
+    } catch (err) {
+      console.error("Failed to update service:", err);
+      showToast("❌ Save failed. Check Firebase rules/env.");
+    }
   };
 
-  const deleteService = (id) => { setServices(prev => prev.filter(s => s.id !== id)); showToast("🗑️ Deleted."); };
-  const toggleService = (id) => setServices(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
+  const deleteService = async (id) => {
+    try {
+      await setServices(prev => prev.filter(s => s.id !== id));
+      showToast("🗑️ Deleted.");
+    } catch (err) {
+      console.error("Failed to delete service:", err);
+      showToast("❌ Delete failed. Check Firebase rules/env.");
+    }
+  };
 
-  const addTesti = () => {
+  const toggleService = async (id) => {
+    try {
+      await setServices(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
+    } catch (err) {
+      console.error("Failed to toggle service:", err);
+      showToast("❌ Save failed. Check Firebase rules/env.");
+    }
+  };
+
+  const addTesti = async () => {
     if (!newTesti.name || !newTesti.text) return showToast("❌ Name and text required.");
-    setTestimonials(prev => [...prev, { ...newTesti, id: Date.now(), stars: +newTesti.stars }]);
-    setNewTesti({ name: "", location: "", text: "", stars: 5 });
-    showToast("✅ Review added!");
+    try {
+      await setTestimonials(prev => [...prev, { ...newTesti, id: Date.now(), stars: +newTesti.stars }]);
+      setNewTesti({ name: "", location: "", text: "", stars: 5 });
+      showToast("✅ Review added!");
+    } catch (err) {
+      console.error("Failed to save review:", err);
+      showToast("❌ Save failed. Check Firebase rules/env.");
+    }
   };
 
-  const deleteTesti = (id) => { setTestimonials(prev => prev.filter(t => t.id !== id)); showToast("🗑️ Deleted."); };
+  const deleteTesti = async (id) => {
+    try {
+      await setTestimonials(prev => prev.filter(t => t.id !== id));
+      showToast("🗑️ Deleted.");
+    } catch (err) {
+      console.error("Failed to delete review:", err);
+      showToast("❌ Delete failed. Check Firebase rules/env.");
+    }
+  };
 
-  const updateTesti = () => {
-    setTestimonials(prev => prev.map(t => t.id === editTesti.id ? { ...editTesti, stars: +editTesti.stars } : t));
-    setEditTesti(null);
-    showToast("✅ Review updated!");
+  const updateTesti = async () => {
+    try {
+      await setTestimonials(prev => prev.map(t => t.id === editTesti.id ? { ...editTesti, stars: +editTesti.stars } : t));
+      setEditTesti(null);
+      showToast("✅ Review updated!");
+    } catch (err) {
+      console.error("Failed to update review:", err);
+      showToast("❌ Save failed. Check Firebase rules/env.");
+    }
   };
 
   const tabs = [
