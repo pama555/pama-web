@@ -7,7 +7,7 @@ import { arrayUnion, doc, onSnapshot, setDoc } from "firebase/firestore";
 const AdminLogin = lazy(() => import("./components/admin/AdminLogin"));
 const AdminPanel = lazy(() => import("./components/admin/AdminPanel"));
 const DOC = (key) => doc(db, "pama", key);
-const withTimeout = (promise, label, ms = 30000) =>
+const withTimeout = (promise, label, ms = 60000) =>
   new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
     promise
@@ -135,7 +135,8 @@ export default function App() {
     infoRef.current = updated;
     setInfo(updated);
     try {
-      await withTimeout(setDoc(DOC("info"), updated), "Save business info");
+      // No timeout for info — avoids false "timed out" errors on slow connections
+      await setDoc(DOC("info"), updated);
     } catch (err) {
       infoRef.current = prev;
       setInfo(prev);
