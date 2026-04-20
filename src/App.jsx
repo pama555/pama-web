@@ -7,7 +7,7 @@ import { arrayUnion, doc, onSnapshot, setDoc } from "firebase/firestore";
 const AdminLogin = lazy(() => import("./components/admin/AdminLogin"));
 const AdminPanel = lazy(() => import("./components/admin/AdminPanel"));
 const DOC = (key) => doc(db, "pama", key);
-const withTimeout = (promise, label, ms = 12000) =>
+const withTimeout = (promise, label, ms = 30000) =>
   new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
     promise

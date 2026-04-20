@@ -40,7 +40,17 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
     } catch (err) {
       console.error("Failed to save business info:", err);
       const isTimeout = String(err?.message || "").toLowerCase().includes("timed out");
-      showToast(isTimeout ? "❌ Save timed out. Check internet/firestore." : "❌ Save failed. Check Firebase rules/env.");
+      if (isTimeout) {
+        try {
+          showToast("⏳ Network slow. Retrying save...");
+          await setInfo({ ...editInfo });
+          showToast("✅ Business info saved after retry!");
+          return;
+        } catch (retryErr) {
+          console.error("Retry failed for business info save:", retryErr);
+        }
+      }
+      showToast(isTimeout ? "❌ Save timed out. Please try once again." : "❌ Save failed. Check Firebase rules/env.");
     } finally {
       setIsSavingInfo(false);
     }
