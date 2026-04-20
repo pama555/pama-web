@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Logo from "../Logo";
 import { inp, cardStyle } from "../../utils/styles";
 
@@ -17,18 +17,32 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
   const [showEditEmojiPicker, setShowEditEmojiPicker] = useState(false);
   const [editInfo, setEditInfo] = useState({ ...info });
   const [toast, setToast] = useState("");
+  const [isSavingInfo, setIsSavingInfo] = useState(false);
   const [editTesti, setEditTesti] = useState(null);
   const [newTesti, setNewTesti] = useState({ name: "", location: "", text: "", stars: 5 });
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
+  useEffect(() => {
+    setEditInfo({ ...info });
+  }, [info]);
+
   const saveInfo = async () => {
+    if (isSavingInfo) return;
+    if (JSON.stringify(editInfo) === JSON.stringify(info)) {
+      showToast("ℹ️ No changes to save.");
+      return;
+    }
+    setIsSavingInfo(true);
     try {
       await setInfo({ ...editInfo });
       showToast("✅ Business info saved!");
     } catch (err) {
       console.error("Failed to save business info:", err);
-      showToast("❌ Save failed. Check Firebase rules/env.");
+      const isTimeout = String(err?.message || "").toLowerCase().includes("timed out");
+      showToast(isTimeout ? "❌ Save timed out. Check internet/firestore." : "❌ Save failed. Check Firebase rules/env.");
+    } finally {
+      setIsSavingInfo(false);
     }
   };
 
@@ -537,11 +551,12 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
                   ))}
                 </div>
               </div>
-              <button onClick={saveInfo} style={{
+              <button onClick={saveInfo} disabled={isSavingInfo} style={{
                 width: "100%", background: "linear-gradient(135deg,#0f3460,#1a6db5)", color: "white",
                 border: "none", padding: "15px 0", borderRadius: 14, fontSize: 15,
-                fontWeight: 800, cursor: "pointer", fontFamily: "Georgia,serif",
-              }}>💾 Save All Changes</button>
+                fontWeight: 800, cursor: isSavingInfo ? "not-allowed" : "pointer", fontFamily: "Georgia,serif",
+                opacity: isSavingInfo ? 0.75 : 1,
+              }}>{isSavingInfo ? "⏳ Saving..." : "💾 Save All Changes"}</button>
             </div>
           )}
 

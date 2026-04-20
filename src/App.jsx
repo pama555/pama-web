@@ -7,6 +7,19 @@ import { arrayUnion, doc, onSnapshot, setDoc } from "firebase/firestore";
 const AdminLogin = lazy(() => import("./components/admin/AdminLogin"));
 const AdminPanel = lazy(() => import("./components/admin/AdminPanel"));
 const DOC = (key) => doc(db, "pama", key);
+const withTimeout = (promise, label, ms = 12000) =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
 
 export default function App() {
   const [mode, setMode] = useState("public");
@@ -94,7 +107,7 @@ export default function App() {
     servicesRef.current = updated;
     setServices(updated);
     try {
-      await setDoc(DOC("services"), { list: updated });
+      await withTimeout(setDoc(DOC("services"), { list: updated }), "Save services");
     } catch (err) {
       servicesRef.current = prev;
       setServices(prev);
@@ -108,7 +121,7 @@ export default function App() {
     testimonialsRef.current = updated;
     setTestimonials(updated);
     try {
-      await setDoc(DOC("testimonials"), { list: updated });
+      await withTimeout(setDoc(DOC("testimonials"), { list: updated }), "Save testimonials");
     } catch (err) {
       testimonialsRef.current = prev;
       setTestimonials(prev);
@@ -122,7 +135,7 @@ export default function App() {
     infoRef.current = updated;
     setInfo(updated);
     try {
-      await setDoc(DOC("info"), updated);
+      await withTimeout(setDoc(DOC("info"), updated), "Save business info");
     } catch (err) {
       infoRef.current = prev;
       setInfo(prev);
@@ -131,7 +144,10 @@ export default function App() {
   };
 
   const handleNewBooking = async (booking) => {
-    await setDoc(DOC("bookings"), { list: arrayUnion(booking) }, { merge: true });
+    await withTimeout(
+      setDoc(DOC("bookings"), { list: arrayUnion(booking) }, { merge: true }),
+      "Save booking"
+    );
   };
 
   // ── Admin keyboard shortcut ─────────────────────────────────────────────
