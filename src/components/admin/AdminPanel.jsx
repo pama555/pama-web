@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Logo from "../Logo";
 import { inp, cardStyle } from "../../utils/styles";
+import { formatFirebaseError } from "../../utils/firebaseError";
 
 const EMOJI_LIST = [
   "🏠","🚽","🧊","📦","🍽️","🥗","🧹","🧺","👗","👔","🪣","🧴","🪥","🧽","🫧",
@@ -8,7 +9,7 @@ const EMOJI_LIST = [
   "🏡","🌸","✨","⭐","💎","🎯","🚀","💼","📋","🗂️","📁","🗃️","🪄","🎁","🛒",
 ];
 
-function AdminPanel({ services, setServices, testimonials, setTestimonials, info, setInfo, bookings, onLogout }) {
+function AdminPanel({ services, setServices, testimonials, setTestimonials, info, setInfo, bookings, firebaseStatus, onLogout }) {
   const [tab, setTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editSvc, setEditSvc] = useState(null);
@@ -44,7 +45,7 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
       showToast("✅ Service added!");
     } catch (err) {
       console.error(err);
-      showToast("❌ Save failed. Check Firebase.");
+      showToast(`❌ ${formatFirebaseError(err)}`);
     }
   };
 
@@ -60,7 +61,7 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
       showToast("✅ Service updated!");
     } catch (err) {
       console.error(err);
-      showToast("❌ Save failed. Check Firebase.");
+      showToast(`❌ ${formatFirebaseError(err)}`);
     }
   };
 
@@ -71,7 +72,7 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
       showToast("🗑️ Deleted.");
     } catch (err) {
       console.error(err);
-      showToast("❌ Delete failed.");
+      showToast(`❌ ${formatFirebaseError(err)}`);
     }
   };
 
@@ -85,7 +86,7 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
       showToast(isNowActive ? "✅ Service shown." : "⏸ Service hidden.");
     } catch (err) {
       console.error(err);
-      showToast("❌ Failed to update.");
+      showToast(`❌ ${formatFirebaseError(err)}`);
     }
   };
 
@@ -101,7 +102,7 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
       showToast("✅ Review added!");
     } catch (err) {
       console.error(err);
-      showToast("❌ Save failed.");
+      showToast(`❌ ${formatFirebaseError(err)}`);
     }
   };
 
@@ -115,7 +116,7 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
       showToast("✅ Review updated!");
     } catch (err) {
       console.error(err);
-      showToast("❌ Save failed.");
+      showToast(`❌ ${formatFirebaseError(err)}`);
     }
   };
 
@@ -126,7 +127,7 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
       showToast("🗑️ Deleted.");
     } catch (err) {
       console.error(err);
-      showToast("❌ Delete failed.");
+      showToast(`❌ ${formatFirebaseError(err)}`);
     }
   };
 
@@ -144,7 +145,7 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
       showToast("✅ Business info saved!");
     } catch (err) {
       console.error(err);
-      showToast("❌ Save failed. Check Firebase.");
+      showToast(`❌ ${formatFirebaseError(err)}`);
     } finally {
       setIsSaving(false);
     }
@@ -203,7 +204,7 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
           background: "#0f3460", color: "white", padding: "13px 24px",
           borderRadius: 14, zIndex: 9999, fontWeight: 600,
           boxShadow: "0 8px 30px rgba(0,0,0,0.2)", fontSize: 14,
-          whiteSpace: "nowrap",
+          whiteSpace: "normal", textAlign: "center", maxWidth: "min(92vw, 760px)",
         }}>{toast}</div>
       )}
 
@@ -272,6 +273,20 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
 
         {/* Content */}
         <div style={{ flex: 1, padding: "20px 16px", overflowY: "auto" }}>
+          {firebaseStatus && (
+            <div style={{
+              background: "#fff4e5",
+              border: "1px solid #f59e0b",
+              color: "#7c2d12",
+              borderRadius: 12,
+              padding: "10px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+              marginBottom: 16,
+            }}>
+              ⚠️ Firebase issue: {firebaseStatus}
+            </div>
+          )}
 
           {/* DASHBOARD */}
           {tab === "dashboard" && (

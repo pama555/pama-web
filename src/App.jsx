@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import PublicSite from "./components/public/PublicSite";
 import { defaultServices, defaultTestimonials, defaultInfo } from "./data/defaults";
-import { db } from "./firebase/config";
+import { db, isFirebaseConfigured, missingFirebaseEnvKeys } from "./firebase/config";
 import { arrayUnion, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { buildMissingFirebaseEnvError, formatFirebaseError } from "./utils/firebaseError";
 
 const AdminLogin = lazy(() => import("./components/admin/AdminLogin"));
 const AdminPanel = lazy(() => import("./components/admin/AdminPanel"));
@@ -29,9 +30,15 @@ export default function App() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [firebaseStatus, setFirebaseStatus] = useState("");
   const servicesRef = useRef(services);
   const testimonialsRef = useRef(testimonials);
   const infoRef = useRef(info);
+
+  const ensureFirebaseConfigured = () => {
+    if (isFirebaseConfigured) return;
+    throw buildMissingFirebaseEnvError(missingFirebaseEnvKeys);
+  };
 
   useEffect(() => { servicesRef.current = services; }, [services]);
   useEffect(() => { testimonialsRef.current = testimonials; }, [testimonials]);
@@ -39,6 +46,13 @@ export default function App() {
 
   // ── REAL-TIME LISTENERS (Public + Admin shared docs) ───────────────────
   useEffect(() => {
+    if (!isFirebaseConfigured) {
+      const configErr = buildMissingFirebaseEnvError(missingFirebaseEnvKeys);
+      setFirebaseStatus(configErr.message);
+      setLoading(false);
+      return;
+    }
+
     const loaded = { services: false, testimonials: false, info: false };
 
     const markLoaded = (key) => {
@@ -56,6 +70,7 @@ export default function App() {
       markLoaded("services");
     }, (err) => {
       console.error("Services listener error:", err);
+      setFirebaseStatus(formatFirebaseError(err));
       markLoaded("services");
     });
 
@@ -65,6 +80,7 @@ export default function App() {
       markLoaded("testimonials");
     }, (err) => {
       console.error("Testimonials listener error:", err);
+      setFirebaseStatus(formatFirebaseError(err));
       markLoaded("testimonials");
     });
 
@@ -74,6 +90,7 @@ export default function App() {
       markLoaded("info");
     }, (err) => {
       console.error("Info listener error:", err);
+      setFirebaseStatus(formatFirebaseError(err));
       markLoaded("info");
     });
 
@@ -89,12 +106,14 @@ export default function App() {
   // ── REAL-TIME LISTENER (Admin-only) ─────────────────────────────────────
   useEffect(() => {
     if (mode !== "admin") return;
+    if (!isFirebaseConfigured) return;
 
     const unsubBookings = onSnapshot(DOC("bookings"), (snap) => {
       if (snap.exists()) setBookings(snap.data().list || []);
       else setBookings([]);
     }, (err) => {
       console.error("Bookings listener error:", err);
+      setFirebaseStatus(formatFirebaseError(err));
     });
 
     return () => unsubBookings();
@@ -102,6 +121,7 @@ export default function App() {
 
   // ── SAVE FUNCTIONS (only called by admin) ───────────────────────────────
   const handleSetServices = async (val) => {
+    ensureFirebaseConfigured();
     const prev = servicesRef.current;
     const updated = typeof val === "function" ? val(prev) : val;
     servicesRef.current = updated;
@@ -111,11 +131,13 @@ export default function App() {
     } catch (err) {
       servicesRef.current = prev;
       setServices(prev);
+      setFirebaseStatus(formatFirebaseError(err));
       throw err;
     }
   };
 
   const handleSetTestimonials = async (val) => {
+    ensureFirebaseConfigured();
     const prev = testimonialsRef.current;
     const updated = typeof val === "function" ? val(prev) : val;
     testimonialsRef.current = updated;
@@ -125,11 +147,13 @@ export default function App() {
     } catch (err) {
       testimonialsRef.current = prev;
       setTestimonials(prev);
+      setFirebaseStatus(formatFirebaseError(err));
       throw err;
     }
   };
 
   const handleSetInfo = async (val) => {
+    ensureFirebaseConfigured();
     const prev = infoRef.current;
     const updated = typeof val === "function" ? val(prev) : val;
     infoRef.current = updated;
@@ -140,15 +164,22 @@ export default function App() {
     } catch (err) {
       infoRef.current = prev;
       setInfo(prev);
+      setFirebaseStatus(formatFirebaseError(err));
       throw err;
     }
   };
 
   const handleNewBooking = async (booking) => {
-    await withTimeout(
-      setDoc(DOC("bookings"), { list: arrayUnion(booking) }, { merge: true }),
-      "Save booking"
-    );
+    ensureFirebaseConfigured();
+    try {
+      await withTimeout(
+        setDoc(DOC("bookings"), { list: arrayUnion(booking) }, { merge: true }),
+        "Save booking"
+      );
+    } catch (err) {
+      setFirebaseStatus(formatFirebaseError(err));
+      throw err;
+    }
   };
 
   // ── Admin keyboard shortcut ─────────────────────────────────────────────
@@ -195,6 +226,7 @@ export default function App() {
         testimonials={testimonials} setTestimonials={handleSetTestimonials}
         info={info}                 setInfo={handleSetInfo}
         bookings={bookings}
+        firebaseStatus={firebaseStatus}
         onLogout={() => { setMode("public"); setIsAdmin(false); }}
       />
     </Suspense>

@@ -1,7 +1,20 @@
-// ✅ REPLACE the values below with YOUR Firebase config from Step 3
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
- 
+
+const REQUIRED_FIREBASE_ENV_KEYS = [
+  "VITE_FIREBASE_API_KEY",
+  "VITE_FIREBASE_AUTH_DOMAIN",
+  "VITE_FIREBASE_PROJECT_ID",
+  "VITE_FIREBASE_STORAGE_BUCKET",
+  "VITE_FIREBASE_MESSAGING_SENDER_ID",
+  "VITE_FIREBASE_APP_ID",
+];
+
+export const missingFirebaseEnvKeys = REQUIRED_FIREBASE_ENV_KEYS.filter(
+  (key) => !import.meta.env[key]
+);
+export const isFirebaseConfigured = missingFirebaseEnvKeys.length === 0;
+
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -10,6 +23,13 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 };
- 
+
+if (!isFirebaseConfigured) {
+  console.error(
+    "Firebase is not fully configured. Missing environment variables:",
+    missingFirebaseEnvKeys.join(", ")
+  );
+}
+
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
