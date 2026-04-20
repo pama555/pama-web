@@ -17,124 +17,140 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
   const [showEditEmojiPicker, setShowEditEmojiPicker] = useState(false);
   const [editInfo, setEditInfo] = useState({ ...info });
   const [toast, setToast] = useState("");
-  const [isSavingInfo, setIsSavingInfo] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editTesti, setEditTesti] = useState(null);
   const [newTesti, setNewTesti] = useState({ name: "", location: "", text: "", stars: 5 });
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
-  useEffect(() => {
-    setEditInfo({ ...info });
-  }, [info]);
+  useEffect(() => { setEditInfo({ ...info }); }, [info]);
 
-  const saveInfo = async () => {
-    if (isSavingInfo) return;
-    if (JSON.stringify(editInfo) === JSON.stringify(info)) {
-      showToast("ℹ️ No changes to save.");
-      return;
-    }
-    setIsSavingInfo(true);
-    try {
-      await setInfo({ ...editInfo });
-      showToast("✅ Business info saved!");
-    } catch (err) {
-      console.error("Failed to save business info:", err);
-      const isTimeout = String(err?.message || "").toLowerCase().includes("timed out");
-      if (isTimeout) {
-        try {
-          showToast("⏳ Network slow. Retrying save...");
-          await setInfo({ ...editInfo });
-          showToast("✅ Business info saved after retry!");
-          return;
-        } catch (retryErr) {
-          console.error("Retry failed for business info save:", retryErr);
-        }
-      }
-      showToast(isTimeout ? "❌ Save timed out. Please try once again." : "❌ Save failed. Check Firebase rules/env.");
-    } finally {
-      setIsSavingInfo(false);
-    }
-  };
+  // ── SERVICE ACTIONS — pass direct arrays, NOT functions ─────────────────
 
   const addService = async () => {
     if (!newSvc.name || !newSvc.price) return showToast("❌ Name and price required.");
+    const newItem = {
+      ...newSvc,
+      id: Date.now(),
+      price: +newSvc.price,
+      original: newSvc.original ? +newSvc.original : null,
+      rating: null,
+      reviews: null,
+    };
+    const updated = [...services, newItem];           // ✅ direct array
     try {
-      await setServices(prev => [...prev, {
-        ...newSvc, id: Date.now(), price: +newSvc.price,
-        original: newSvc.original ? +newSvc.original : null, rating: null, reviews: null
-      }]);
+      await setServices(updated);
       setNewSvc({ icon: "🏠", name: "", price: "", original: "", badge: "", active: true });
       showToast("✅ Service added!");
     } catch (err) {
-      console.error("Failed to save service:", err);
-      showToast("❌ Save failed. Check Firebase rules/env.");
+      console.error(err);
+      showToast("❌ Save failed. Check Firebase.");
     }
   };
 
   const updateService = async () => {
-    try {
-      await setServices(prev => prev.map(s => s.id === editSvc.id
+    const updated = services.map(s =>                 // ✅ direct array
+      s.id === editSvc.id
         ? { ...editSvc, price: +editSvc.price, original: editSvc.original ? +editSvc.original : null }
-        : s));
+        : s
+    );
+    try {
+      await setServices(updated);
       setEditSvc(null);
       showToast("✅ Service updated!");
     } catch (err) {
-      console.error("Failed to update service:", err);
-      showToast("❌ Save failed. Check Firebase rules/env.");
+      console.error(err);
+      showToast("❌ Save failed. Check Firebase.");
     }
   };
 
   const deleteService = async (id) => {
+    const updated = services.filter(s => s.id !== id); // ✅ direct array
     try {
-      await setServices(prev => prev.filter(s => s.id !== id));
+      await setServices(updated);
       showToast("🗑️ Deleted.");
     } catch (err) {
-      console.error("Failed to delete service:", err);
-      showToast("❌ Delete failed. Check Firebase rules/env.");
+      console.error(err);
+      showToast("❌ Delete failed.");
     }
   };
 
   const toggleService = async (id) => {
+    const updated = services.map(s =>                  // ✅ direct array
+      s.id === id ? { ...s, active: !s.active } : s
+    );
     try {
-      await setServices(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
+      await setServices(updated);
+      const isNowActive = updated.find(s => s.id === id)?.active;
+      showToast(isNowActive ? "✅ Service shown." : "⏸ Service hidden.");
     } catch (err) {
-      console.error("Failed to toggle service:", err);
-      showToast("❌ Save failed. Check Firebase rules/env.");
+      console.error(err);
+      showToast("❌ Failed to update.");
     }
   };
+
+  // ── TESTIMONIAL ACTIONS ─────────────────────────────────────────────────
 
   const addTesti = async () => {
     if (!newTesti.name || !newTesti.text) return showToast("❌ Name and text required.");
+    const newItem = { ...newTesti, id: Date.now(), stars: +newTesti.stars };
+    const updated = [...testimonials, newItem];        // ✅ direct array
     try {
-      await setTestimonials(prev => [...prev, { ...newTesti, id: Date.now(), stars: +newTesti.stars }]);
+      await setTestimonials(updated);
       setNewTesti({ name: "", location: "", text: "", stars: 5 });
       showToast("✅ Review added!");
     } catch (err) {
-      console.error("Failed to save review:", err);
-      showToast("❌ Save failed. Check Firebase rules/env.");
-    }
-  };
-
-  const deleteTesti = async (id) => {
-    try {
-      await setTestimonials(prev => prev.filter(t => t.id !== id));
-      showToast("🗑️ Deleted.");
-    } catch (err) {
-      console.error("Failed to delete review:", err);
-      showToast("❌ Delete failed. Check Firebase rules/env.");
+      console.error(err);
+      showToast("❌ Save failed.");
     }
   };
 
   const updateTesti = async () => {
+    const updated = testimonials.map(t =>              // ✅ direct array
+      t.id === editTesti.id ? { ...editTesti, stars: +editTesti.stars } : t
+    );
     try {
-      await setTestimonials(prev => prev.map(t => t.id === editTesti.id ? { ...editTesti, stars: +editTesti.stars } : t));
+      await setTestimonials(updated);
       setEditTesti(null);
       showToast("✅ Review updated!");
     } catch (err) {
-      console.error("Failed to update review:", err);
-      showToast("❌ Save failed. Check Firebase rules/env.");
+      console.error(err);
+      showToast("❌ Save failed.");
     }
   };
+
+  const deleteTesti = async (id) => {
+    const updated = testimonials.filter(t => t.id !== id); // ✅ direct array
+    try {
+      await setTestimonials(updated);
+      showToast("🗑️ Deleted.");
+    } catch (err) {
+      console.error(err);
+      showToast("❌ Delete failed.");
+    }
+  };
+
+  // ── INFO ACTION ─────────────────────────────────────────────────────────
+
+  const saveInfo = async () => {
+    if (isSaving) return;
+    if (JSON.stringify(editInfo) === JSON.stringify(info)) {
+      showToast("ℹ️ No changes to save.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await setInfo({ ...editInfo });                  // ✅ direct object
+      showToast("✅ Business info saved!");
+    } catch (err) {
+      console.error(err);
+      showToast("❌ Save failed. Check Firebase.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ── UI HELPERS ──────────────────────────────────────────────────────────
 
   const tabs = [
     ["dashboard", "📊", "Dashboard"],
@@ -153,7 +169,6 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
     }}>{children}</button>
   );
 
-  // Emoji Picker Component
   const EmojiPicker = ({ onSelect, onClose }) => (
     <div style={{
       position: "absolute", top: "110%", left: 0, zIndex: 1000,
@@ -167,7 +182,6 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
           <button key={e} onClick={() => { onSelect(e); onClose(); }} style={{
             background: "none", border: "1px solid #e0eeff", borderRadius: 8,
             fontSize: 20, cursor: "pointer", padding: "4px 6px",
-            transition: "background 0.15s",
           }}
             onMouseEnter={ev => ev.target.style.background = "#e8f4fd"}
             onMouseLeave={ev => ev.target.style.background = "none"}
@@ -210,7 +224,6 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
         zIndex: 300,
         transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
         transition: "transform 0.25s ease",
-        // Desktop: always visible
         ...(window.innerWidth >= 768 ? { position: "sticky", transform: "none" } : {}),
       }}>
         <div style={{ padding: "26px 20px 18px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
@@ -247,7 +260,6 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
           background: "linear-gradient(90deg,#0f3460,#1a6db5)",
           padding: "12px 16px", display: "flex", alignItems: "center",
           justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100,
-          // Hide on desktop
           ...(window.innerWidth >= 768 ? { display: "none" } : {}),
         }}>
           <button onClick={() => setSidebarOpen(true)} style={{
@@ -312,12 +324,8 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
           {tab === "services" && (
             <div>
               <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0f3460", marginBottom: 18 }}>Manage Services</h1>
-
-              {/* Add Service Form */}
               <div style={{ ...cardStyle, marginBottom: 20 }}>
                 <h3 style={{ color: "#0f3460", marginBottom: 14, fontWeight: 700 }}>➕ Add New Service</h3>
-
-                {/* Emoji Picker Row */}
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 11, color: "#5a7fa0", fontWeight: 600, display: "block", marginBottom: 6 }}>Emoji Icon</label>
                   <div style={{ position: "relative", display: "inline-block" }}>
@@ -325,7 +333,6 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
                       background: "#f0f6ff", border: "1.5px solid #e0eeff",
                       borderRadius: 12, padding: "10px 16px", cursor: "pointer",
                       fontSize: 22, display: "flex", alignItems: "center", gap: 8,
-                      fontFamily: "Georgia,serif",
                     }}>
                       {newSvc.icon} <span style={{ fontSize: 12, color: "#5a7fa0" }}>▼</span>
                     </button>
@@ -337,32 +344,23 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
                     )}
                   </div>
                 </div>
-
-                {/* Other fields */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
                   {[["name", "Service Name"], ["price", "Price ₹"], ["original", "Original ₹"], ["badge", "Badge (NEW etc)"]].map(([k, pl]) => (
                     <div key={k}>
                       <label style={{ fontSize: 11, color: "#5a7fa0", fontWeight: 600, display: "block", marginBottom: 4 }}>{pl}</label>
-                      <input
-                        value={newSvc[k]}
-                        onChange={e => setNewSvc(p => ({ ...p, [k]: e.target.value }))}
-                        placeholder={pl}
-                        style={{ ...inp, fontSize: 13 }}
-                      />
+                      <input value={newSvc[k]} onChange={e => setNewSvc(p => ({ ...p, [k]: e.target.value }))} placeholder={pl} style={{ ...inp, fontSize: 13 }} />
                     </div>
                   ))}
                 </div>
                 <Btn onClick={addService} full>➕ Add Service</Btn>
               </div>
 
-              {/* Services List */}
               <div style={cardStyle}>
                 <h3 style={{ color: "#0f3460", marginBottom: 14, fontWeight: 700 }}>All Services ({services.length})</h3>
                 {services.map(s => (
                   <div key={s.id}>
                     {editSvc?.id === s.id ? (
                       <div style={{ background: "#f0f6ff", borderRadius: 14, padding: 14, marginBottom: 10 }}>
-                        {/* Edit emoji */}
                         <div style={{ marginBottom: 10 }}>
                           <label style={{ fontSize: 11, color: "#5a7fa0", display: "block", marginBottom: 4 }}>Icon</label>
                           <div style={{ position: "relative", display: "inline-block" }}>
@@ -561,19 +559,18 @@ function AdminPanel({ services, setServices, testimonials, setTestimonials, info
                   ))}
                 </div>
               </div>
-              <button onClick={saveInfo} disabled={isSavingInfo} style={{
+              <button onClick={saveInfo} disabled={isSaving} style={{
                 width: "100%", background: "linear-gradient(135deg,#0f3460,#1a6db5)", color: "white",
                 border: "none", padding: "15px 0", borderRadius: 14, fontSize: 15,
-                fontWeight: 800, cursor: isSavingInfo ? "not-allowed" : "pointer", fontFamily: "Georgia,serif",
-                opacity: isSavingInfo ? 0.75 : 1,
-              }}>{isSavingInfo ? "⏳ Saving..." : "💾 Save All Changes"}</button>
+                fontWeight: 800, cursor: isSaving ? "not-allowed" : "pointer",
+                fontFamily: "Georgia,serif", opacity: isSaving ? 0.75 : 1,
+              }}>{isSaving ? "⏳ Saving..." : "💾 Save All Changes"}</button>
             </div>
           )}
 
         </div>
       </div>
 
-      {/* Desktop sidebar spacer */}
       <style>{`
         @media (min-width: 768px) {
           .admin-sidebar { position: sticky !important; transform: none !important; }
