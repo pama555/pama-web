@@ -1,21 +1,164 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Logo from "../Logo";
 import QrSvg from "../QrSvg";
 import { inp, cardStyle } from "../../utils/styles";
 
-function PublicSite({ services, testimonials, info, onBooking }) {
+// ── Service Banners data ─────────────────────────────────────────────────────
+const BANNERS = [
+  {
+    id: 1, emoji: "🧹", title: "Deep Clean Deal",
+    subtitle: "Save 40% on full home deep cleaning this month",
+    tag: "LIMITED OFFER",
+    bg: "linear-gradient(135deg,#0f3460 0%,#1a6db5 100%)",
+    accent: "#f0c040",
+  },
+  {
+    id: 2, emoji: "🚽", title: "Bathroom Package",
+    subtitle: "3 bathrooms cleaned for just ₹75. Book before Sunday!",
+    tag: "WEEKEND SPECIAL",
+    bg: "linear-gradient(135deg,#065a46,#0d9668)",
+    accent: "#fde68a",
+  },
+  {
+    id: 3, emoji: "👗", title: "Complete Wardrobe",
+    subtitle: "Organize, fold & iron your entire wardrobe — ₹497 flat",
+    tag: "MOST POPULAR",
+    bg: "linear-gradient(135deg,#581c87,#9333ea)",
+    accent: "#fbcfe8",
+  },
+  {
+    id: 4, emoji: "🧊", title: "Fridge Cleaning",
+    subtitle: "Deep clean + deodorize. First time customers get 20% off",
+    tag: "NEW USER OFFER",
+    bg: "linear-gradient(135deg,#7c2d12,#c2410c)",
+    accent: "#fed7aa",
+  },
+];
+
+// ── Validation helpers ───────────────────────────────────────────────────────
+function validateForm(form) {
+  const errors = {};
+  if (!form.name.trim()) errors.name = "Full name is required";
+  else if (form.name.trim().length < 2) errors.name = "Name must be at least 2 characters";
+
+  if (!form.phone.trim()) errors.phone = "Phone number is required";
+  else if (!/^[6-9]\d{9}$/.test(form.phone.replace(/\s+/g, "")))
+    errors.phone = "Enter a valid 10-digit Indian mobile number";
+
+  if (!form.address.trim()) errors.address = "Address is required";
+  else if (form.address.trim().length < 10) errors.address = "Please enter a more complete address";
+
+  if (!form.date) errors.date = "Preferred date is required";
+  else {
+    const chosen = new Date(form.date);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    if (chosen < today) errors.date = "Date cannot be in the past";
+  }
+  return errors;
+}
+
+// ── ServiceBanners component ─────────────────────────────────────────────────
+function ServiceBanners({ onBook }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setIdx(i => (i + 1) % BANNERS.length), 4500);
+    return () => clearInterval(iv);
+  }, []);
+  const b = BANNERS[idx];
+  return (
+    <div style={{ padding: "24px 16px 0", maxWidth: 940, margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: "#0f3460", margin: 0 }}>🎯 Special Offers</h2>
+        <span style={{ fontSize: 11, color: "#94a3b8" }}>{idx + 1} / {BANNERS.length}</span>
+      </div>
+      <div style={{
+        background: b.bg, borderRadius: 20, padding: "22px 22px",
+        color: "white", position: "relative", overflow: "hidden", minHeight: 130,
+        transition: "background 0.5s ease",
+      }}>
+        <div style={{ position: "absolute", top: -20, right: -20, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
+        <div style={{ position: "absolute", bottom: -30, right: 60, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
+        <div style={{ position: "relative", zIndex: 1, display: "flex", gap: 16, alignItems: "center" }}>
+          <div style={{ fontSize: 42 }}>{b.emoji}</div>
+          <div style={{ flex: 1 }}>
+            <span style={{
+              background: b.accent, color: "#1a2e4a",
+              fontSize: 9, fontWeight: 900, letterSpacing: 1,
+              padding: "3px 10px", borderRadius: 20, display: "inline-block", marginBottom: 6,
+            }}>{b.tag}</span>
+            <h3 style={{ fontSize: 17, fontWeight: 900, margin: "0 0 4px" }}>{b.title}</h3>
+            <p style={{ fontSize: 12, opacity: 0.85, margin: "0 0 12px", lineHeight: 1.4 }}>{b.subtitle}</p>
+            <button onClick={onBook} style={{
+              background: b.accent, color: "#1a2e4a", border: "none",
+              padding: "8px 16px", borderRadius: 18, fontWeight: 800,
+              cursor: "pointer", fontSize: 12, fontFamily: "Georgia, serif",
+            }}>Book Now →</button>
+          </div>
+        </div>
+      </div>
+      {/* Dots */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
+        {BANNERS.map((_, i) => (
+          <button key={i} onClick={() => setIdx(i)} style={{
+            width: i === idx ? 20 : 7, height: 7, borderRadius: 10, padding: 0,
+            background: i === idx ? "#1a6db5" : "#bde0ff",
+            border: "none", cursor: "pointer", transition: "all 0.3s",
+          }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Login Wall component ─────────────────────────────────────────────────────
+function LoginWall({ onOpenUserAuth, onGoHome, label }) {
+  return (
+    <div style={{ maxWidth: 480, margin: "60px auto", padding: "0 16px", textAlign: "center" }}>
+      <div style={{
+        background: "white", borderRadius: 28, padding: "48px 32px",
+        boxShadow: "0 8px 40px rgba(15,52,96,0.12)", border: "1px solid #e8f0fb",
+      }}>
+        <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
+        <h2 style={{ fontSize: 22, fontWeight: 900, color: "#0f3460", margin: "0 0 10px" }}>Sign In Required</h2>
+        <p style={{ color: "#5a7fa0", fontSize: 14, lineHeight: 1.7, margin: "0 0 28px" }}>
+          Please sign in or create an account to {label}.<br />It only takes a minute!
+        </p>
+        <button onClick={onOpenUserAuth} style={{
+          width: "100%", background: "linear-gradient(135deg,#0f3460,#1a6db5)",
+          color: "white", border: "none", padding: "14px 0", borderRadius: 14,
+          fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "Georgia, serif",
+          marginBottom: 10,
+        }}>🔑 Sign In / Sign Up</button>
+        <button onClick={onGoHome} style={{
+          width: "100%", background: "#f1f5f9", color: "#64748b",
+          border: "none", padding: "12px 0", borderRadius: 14,
+          fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Georgia, serif",
+        }}>← Back to Home</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main PublicSite ──────────────────────────────────────────────────────────
+function PublicSite({ services, testimonials, info, onBooking, currentUser, onOpenUserAuth, onOpenDashboard }) {
   const [page, setPage] = useState("home");
   const [added, setAdded] = useState({});
   const [done, setDone] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", address: "", date: "" });
+  const [formErrors, setFormErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [menuOpen, setMenuOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const active = services.filter(s => s.active);
   const totalItems = Object.values(added).reduce((a, b) => a + b, 0);
   const totalPrice = active.reduce((sum, s) => sum + (added[s.name] || 0) * s.price, 0);
 
-  const handleAdd = (n) => setAdded(p => ({ ...p, [n]: (p[n] || 0) + 1 }));
+  const handleAdd = (n) => {
+    if (!currentUser) { onOpenUserAuth(); return; }
+    setAdded(p => ({ ...p, [n]: (p[n] || 0) + 1 }));
+  };
   const handleRemove = (n) => setAdded(p => {
     const x = { ...p };
     if (x[n] > 1) x[n]--;
@@ -23,29 +166,68 @@ function PublicSite({ services, testimonials, info, onBooking }) {
     return x;
   });
 
+  const handleFieldChange = (k, val) => {
+    setForm(p => ({ ...p, [k]: val }));
+    if (touched[k]) {
+      const errs = validateForm({ ...form, [k]: val });
+      setFormErrors(p => ({ ...p, [k]: errs[k] }));
+    }
+  };
+
+  const handleFieldBlur = (k) => {
+    setTouched(p => ({ ...p, [k]: true }));
+    const errs = validateForm(form);
+    setFormErrors(p => ({ ...p, [k]: errs[k] }));
+  };
+
   const handleBook = async (e) => {
     e.preventDefault();
     setBookingError("");
+    const allTouched = { name: true, phone: true, address: true, date: true };
+    setTouched(allTouched);
+    const errors = validateForm(form);
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setSubmitting(true);
     try {
       await onBooking({
         ...form,
+        phone: form.phone.replace(/\s+/g, ""),
         services: active.filter(s => added[s.name]).map(s => ({ ...s, qty: added[s.name] })),
         total: totalPrice,
         bookedAt: new Date().toLocaleString(),
+        userId: currentUser?.uid || null,
+        userEmail: currentUser?.email || null,
       });
       setDone(true);
       setTimeout(() => {
         setDone(false); setAdded({});
         setForm({ name: "", phone: "", address: "", date: "" });
+        setFormErrors({}); setTouched({});
         setPage("home");
-      }, 3000);
+      }, 3500);
     } catch (err) {
       console.error("Booking save failed:", err);
-      setBookingError("Booking failed. Please try again in a few seconds.");
+      setBookingError("Booking failed. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const goTo = (p) => { setPage(p); setMenuOpen(false); window.scrollTo(0, 0); };
+  const goTo = (p) => {
+    // Guard: services and book pages require login
+    if ((p === "services" || p === "book") && !currentUser) {
+      setPage(p + "_locked");
+      setMenuOpen(false);
+      window.scrollTo(0, 0);
+      return;
+    }
+    setPage(p); setMenuOpen(false); window.scrollTo(0, 0);
+  };
+
+  const navItems = ["home", "services", "book", "contact"];
+  const activeNavPage = page.replace("_locked", "");
 
   return (
     <div style={{ fontFamily: "Georgia, serif", minHeight: "100vh", background: "linear-gradient(135deg,#e8f4fd,#ffffff 40%,#dbeeff)", color: "#1a2e4a" }}>
@@ -56,17 +238,17 @@ function PublicSite({ services, testimonials, info, onBooking }) {
         display: "flex", alignItems: "center", justifyContent: "space-between",
         boxShadow: "0 4px 20px rgba(15,52,96,0.3)", position: "sticky", top: 0, zIndex: 100,
       }}>
-        <div style={{ padding: "13px 0" }} onClick={() => goTo("home")} ><Logo /></div>
+        <div style={{ padding: "13px 0", cursor: "pointer" }} onClick={() => goTo("home")}><Logo /></div>
 
-        {/* Desktop nav links */}
+        {/* Desktop nav */}
         <div style={{ display: "flex", gap: 4, alignItems: "center" }} className="desk-nav">
-          {["home", "services", "book", "contact"].map(p => (
+          {navItems.map(p => (
             <button key={p} onClick={() => goTo(p)} style={{
-              background: page === p ? "rgba(255,255,255,0.18)" : "transparent",
-              border: page === p ? "1px solid rgba(255,255,255,0.35)" : "1px solid transparent",
+              background: activeNavPage === p ? "rgba(255,255,255,0.18)" : "transparent",
+              border: activeNavPage === p ? "1px solid rgba(255,255,255,0.35)" : "1px solid transparent",
               color: "white", padding: "8px 13px", borderRadius: 28, cursor: "pointer",
               fontSize: 13, fontFamily: "Georgia,serif", textTransform: "capitalize",
-              fontWeight: page === p ? 700 : 400,
+              fontWeight: activeNavPage === p ? 700 : 400,
             }}>{p}</button>
           ))}
           {totalItems > 0 && (
@@ -75,15 +257,49 @@ function PublicSite({ services, testimonials, info, onBooking }) {
               padding: "8px 14px", borderRadius: 28, cursor: "pointer", fontWeight: 800, fontSize: 13,
             }}>🛒 {totalItems}</button>
           )}
+          {currentUser ? (
+            <button onClick={onOpenDashboard} style={{
+              background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.35)",
+              color: "white", padding: "7px 13px", borderRadius: 28, cursor: "pointer",
+              fontSize: 13, fontFamily: "Georgia,serif", fontWeight: 700,
+              display: "flex", alignItems: "center", gap: 6,
+            }}>
+              <span style={{
+                width: 22, height: 22, borderRadius: "50%", background: "#f0c040",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11, fontWeight: 900, color: "#0f3460",
+              }}>{(currentUser.displayName || currentUser.email || "U")[0].toUpperCase()}</span>
+              My Account
+            </button>
+          ) : (
+            <button onClick={onOpenUserAuth} style={{
+              background: "#f0c040", border: "none", color: "#0f3460",
+              padding: "8px 15px", borderRadius: 28, cursor: "pointer",
+              fontWeight: 800, fontSize: 13, fontFamily: "Georgia,serif",
+            }}>🔑 Sign In</button>
+          )}
         </div>
 
-        {/* Mobile right side */}
+        {/* Mobile nav */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }} className="mob-nav">
           {totalItems > 0 && (
             <button onClick={() => goTo("book")} style={{
               background: "#f0c040", border: "none", color: "#0f3460",
               padding: "7px 12px", borderRadius: 24, cursor: "pointer", fontWeight: 800, fontSize: 13,
             }}>🛒 {totalItems}</button>
+          )}
+          {currentUser ? (
+            <button onClick={onOpenDashboard} style={{
+              width: 34, height: 34, borderRadius: "50%", background: "#f0c040",
+              border: "none", color: "#0f3460", fontWeight: 900, fontSize: 14,
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            }}>{(currentUser.displayName || currentUser.email || "U")[0].toUpperCase()}</button>
+          ) : (
+            <button onClick={onOpenUserAuth} style={{
+              background: "#f0c040", border: "none", color: "#0f3460",
+              padding: "7px 12px", borderRadius: 24, cursor: "pointer",
+              fontWeight: 800, fontSize: 12, fontFamily: "Georgia,serif",
+            }}>🔑 Sign In</button>
           )}
           <button onClick={() => setMenuOpen(!menuOpen)} style={{
             background: "rgba(255,255,255,0.15)", border: "none", color: "white",
@@ -92,7 +308,7 @@ function PublicSite({ services, testimonials, info, onBooking }) {
         </div>
       </nav>
 
-      {/* Mobile dropdown menu */}
+      {/* Mobile dropdown */}
       {menuOpen && (
         <div style={{
           background: "linear-gradient(135deg,#0f3460,#1a6db5)",
@@ -100,15 +316,33 @@ function PublicSite({ services, testimonials, info, onBooking }) {
           position: "sticky", top: 50, zIndex: 99,
           boxShadow: "0 8px 20px rgba(15,52,96,0.3)",
         }}>
-          {["home", "services", "book", "contact"].map(p => (
+          {navItems.map(p => (
             <button key={p} onClick={() => goTo(p)} style={{
-              background: page === p ? "rgba(255,255,255,0.18)" : "transparent",
-              border: page === p ? "1px solid rgba(255,255,255,0.3)" : "none",
+              background: activeNavPage === p ? "rgba(255,255,255,0.18)" : "transparent",
+              border: activeNavPage === p ? "1px solid rgba(255,255,255,0.3)" : "none",
               color: "white", padding: "12px 16px", borderRadius: 12,
               cursor: "pointer", fontSize: 14, fontFamily: "Georgia,serif",
-              textTransform: "capitalize", textAlign: "left", fontWeight: page === p ? 700 : 400,
+              textTransform: "capitalize", textAlign: "left",
+              fontWeight: activeNavPage === p ? 700 : 400,
             }}>{p === "home" ? "🏠" : p === "services" ? "🛠️" : p === "book" ? "📅" : "📞"} {p.charAt(0).toUpperCase() + p.slice(1)}</button>
           ))}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", marginTop: 6, paddingTop: 10 }}>
+            {currentUser ? (
+              <button onClick={() => { setMenuOpen(false); onOpenDashboard(); }} style={{
+                background: "rgba(255,215,0,0.2)", border: "1px solid rgba(255,215,0,0.4)",
+                color: "white", padding: "12px 16px", borderRadius: 12,
+                cursor: "pointer", fontSize: 14, fontFamily: "Georgia,serif",
+                textAlign: "left", fontWeight: 700, width: "100%",
+              }}>👤 My Account ({(currentUser.displayName || currentUser.email || "User").split(" ")[0]})</button>
+            ) : (
+              <button onClick={() => { setMenuOpen(false); onOpenUserAuth(); }} style={{
+                background: "#f0c040", border: "none", color: "#0f3460",
+                padding: "12px 16px", borderRadius: 12,
+                cursor: "pointer", fontSize: 14, fontFamily: "Georgia,serif",
+                textAlign: "left", fontWeight: 800, width: "100%",
+              }}>🔑 Sign In / Sign Up</button>
+            )}
+          </div>
         </div>
       )}
 
@@ -161,8 +395,11 @@ function PublicSite({ services, testimonials, info, onBooking }) {
             ))}
           </div>
 
+          {/* ── SERVICE BANNERS (shown always) ── */}
+          <ServiceBanners onBook={() => goTo("services")} />
+
           {/* Featured Services */}
-          <div style={{ padding: "40px 16px", maxWidth: 940, margin: "0 auto" }}>
+          <div style={{ padding: "32px 16px", maxWidth: 940, margin: "0 auto" }}>
             <h2 style={{ textAlign: "center", fontSize: 22, fontWeight: 800, marginBottom: 6, color: "#0f3460" }}>Our Services</h2>
             <p style={{ textAlign: "center", color: "#5a7fa0", marginBottom: 24, fontSize: 13 }}>Everything your home needs</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(130px,1fr))", gap: 12 }}>
@@ -219,10 +456,17 @@ function PublicSite({ services, testimonials, info, onBooking }) {
         </div>
       )}
 
+      {/* ── SERVICES PAGE — login wall ── */}
+      {page === "services_locked" && (
+        <LoginWall onOpenUserAuth={onOpenUserAuth} onGoHome={() => setPage("home")} label="browse and select services" />
+      )}
+
       {/* ── SERVICES PAGE ── */}
       {page === "services" && (
         <div style={{ maxWidth: 960, margin: "0 auto", padding: "28px 16px" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0f3460", marginBottom: 6 }}>Select Services</h1>
+          {/* Service banners at top of services page */}
+          <ServiceBanners onBook={() => {}} />
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0f3460", marginBottom: 6, marginTop: 28 }}>Select Services</h1>
           <p style={{ color: "#5a7fa0", marginBottom: 22, fontSize: 13 }}>Add services and book in one go</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 14 }}>
             {active.map(s => (
@@ -266,6 +510,11 @@ function PublicSite({ services, testimonials, info, onBooking }) {
         </div>
       )}
 
+      {/* ── BOOK PAGE — login wall ── */}
+      {page === "book_locked" && (
+        <LoginWall onOpenUserAuth={onOpenUserAuth} onGoHome={() => setPage("home")} label="book a service" />
+      )}
+
       {/* ── BOOK PAGE ── */}
       {page === "book" && (
         <div style={{ maxWidth: 560, margin: "0 auto", padding: "28px 16px" }}>
@@ -288,6 +537,7 @@ function PublicSite({ services, testimonials, info, onBooking }) {
             </div>
           ) : (
             <>
+              {/* Selected services summary */}
               <div style={{ ...cardStyle, marginBottom: 18 }}>
                 <h3 style={{ color: "#0f3460", marginBottom: 12, fontWeight: 700, fontSize: 14 }}>Your Selection</h3>
                 {active.filter(s => added[s.name]).map(s => (
@@ -306,28 +556,118 @@ function PublicSite({ services, testimonials, info, onBooking }) {
                   <span>Total</span><span>₹{totalPrice}</span>
                 </div>
               </div>
+
+              {/* Booking form */}
               <div style={cardStyle}>
                 <h3 style={{ color: "#0f3460", marginBottom: 16, fontWeight: 700, fontSize: 14 }}>Your Details</h3>
                 {bookingError && (
                   <div style={{
                     background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca",
-                    borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: 12, fontWeight: 600,
-                  }}>
-                    {bookingError}
-                  </div>
+                    borderRadius: 10, padding: "10px 12px", marginBottom: 14, fontSize: 12, fontWeight: 600,
+                  }}>{bookingError}</div>
                 )}
-                <form onSubmit={handleBook}>
-                  {[["name", "Full Name", "text"], ["phone", "Phone Number", "tel"], ["address", "Address", "text"], ["date", "Preferred Date", "date"]].map(([k, pl, t]) => (
-                    <div key={k} style={{ marginBottom: 12 }}>
-                      <label style={{ fontSize: 12, color: "#5a7fa0", fontWeight: 600, display: "block", marginBottom: 4 }}>{pl}</label>
-                      <input type={t} required value={form[k]} onChange={e => setForm(p => ({ ...p, [k]: e.target.value }))} placeholder={pl} style={{ ...inp, fontSize: 14 }} />
-                    </div>
-                  ))}
-                  <button type="submit" style={{
-                    width: "100%", background: "linear-gradient(135deg,#0f3460,#1a6db5)",
-                    color: "white", border: "none", padding: "14px 0", borderRadius: 12,
-                    fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "Georgia,serif", marginTop: 4,
-                  }}>Confirm Booking ✓</button>
+                <form onSubmit={handleBook} noValidate>
+
+                  {/* Full Name */}
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 12, color: "#5a7fa0", fontWeight: 600, display: "block", marginBottom: 4 }}>
+                      Full Name <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={e => handleFieldChange("name", e.target.value)}
+                      onBlur={() => handleFieldBlur("name")}
+                      placeholder="e.g. Rahul Sharma"
+                      style={{
+                        ...inp, fontSize: 14,
+                        borderColor: formErrors.name ? "#ef4444" : undefined,
+                        outline: formErrors.name ? "none" : undefined,
+                        boxShadow: formErrors.name ? "0 0 0 2px rgba(239,68,68,0.15)" : undefined,
+                      }}
+                    />
+                    {formErrors.name && (
+                      <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4, fontWeight: 600 }}>⚠ {formErrors.name}</div>
+                    )}
+                  </div>
+
+                  {/* Phone */}
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 12, color: "#5a7fa0", fontWeight: 600, display: "block", marginBottom: 4 }}>
+                      Phone Number <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={form.phone}
+                      onChange={e => handleFieldChange("phone", e.target.value)}
+                      onBlur={() => handleFieldBlur("phone")}
+                      placeholder="e.g. 9876543210"
+                      maxLength={10}
+                      style={{
+                        ...inp, fontSize: 14,
+                        borderColor: formErrors.phone ? "#ef4444" : undefined,
+                        boxShadow: formErrors.phone ? "0 0 0 2px rgba(239,68,68,0.15)" : undefined,
+                      }}
+                    />
+                    {formErrors.phone && (
+                      <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4, fontWeight: 600 }}>⚠ {formErrors.phone}</div>
+                    )}
+                  </div>
+
+                  {/* Address */}
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 12, color: "#5a7fa0", fontWeight: 600, display: "block", marginBottom: 4 }}>
+                      Address <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.address}
+                      onChange={e => handleFieldChange("address", e.target.value)}
+                      onBlur={() => handleFieldBlur("address")}
+                      placeholder="e.g. Flat 4B, Sector 18, Noida"
+                      style={{
+                        ...inp, fontSize: 14,
+                        borderColor: formErrors.address ? "#ef4444" : undefined,
+                        boxShadow: formErrors.address ? "0 0 0 2px rgba(239,68,68,0.15)" : undefined,
+                      }}
+                    />
+                    {formErrors.address && (
+                      <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4, fontWeight: 600 }}>⚠ {formErrors.address}</div>
+                    )}
+                  </div>
+
+                  {/* Date */}
+                  <div style={{ marginBottom: 18 }}>
+                    <label style={{ fontSize: 12, color: "#5a7fa0", fontWeight: 600, display: "block", marginBottom: 4 }}>
+                      Preferred Date <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={form.date}
+                      min={new Date().toISOString().split("T")[0]}
+                      onChange={e => handleFieldChange("date", e.target.value)}
+                      onBlur={() => handleFieldBlur("date")}
+                      style={{
+                        ...inp, fontSize: 14,
+                        borderColor: formErrors.date ? "#ef4444" : undefined,
+                        boxShadow: formErrors.date ? "0 0 0 2px rgba(239,68,68,0.15)" : undefined,
+                      }}
+                    />
+                    {formErrors.date && (
+                      <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4, fontWeight: 600 }}>⚠ {formErrors.date}</div>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{
+                      width: "100%", background: "linear-gradient(135deg,#0f3460,#1a6db5)",
+                      color: "white", border: "none", padding: "14px 0", borderRadius: 12,
+                      fontSize: 15, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer",
+                      fontFamily: "Georgia,serif", opacity: submitting ? 0.75 : 1,
+                    }}
+                  >{submitting ? "⏳ Placing Booking..." : "Confirm Booking ✓"}</button>
                 </form>
               </div>
             </>
@@ -377,12 +717,8 @@ function PublicSite({ services, testimonials, info, onBooking }) {
       </footer>
 
       <style>{`
-        @media (min-width: 768px) {
-          .mob-nav { display: none !important; }
-        }
-        @media (max-width: 767px) {
-          .desk-nav { display: none !important; }
-        }
+        @media (min-width: 768px) { .mob-nav { display: none !important; } }
+        @media (max-width: 767px) { .desk-nav { display: none !important; } }
       `}</style>
     </div>
   );
